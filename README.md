@@ -40,6 +40,12 @@ python -m lite_high_finesse_ws6.liteWLM --simulate
 ```bash
 python -m lite_high_finesse_ws6.liteWLM
 ```
+## Control GUIs:
+
+```bash
+python -m pypeto -aLITE <IP_Address>:dev1
+python -m pvplot -aL:<IP_Address>:dev1: 'frequency linewidth'
+```
 
 ## CLI options
 
@@ -59,8 +65,6 @@ Device name: `WLM1`
 | `cycle` | R | — | Poll cycle counter |
 | `frequency` | R | THz | Channel 1 frequency |
 | `linewidth` | R | THz | Channel 1 linewidth |
-| `frequency2` | R | THz | Reserved channel 2 frequency field |
-| `linewidth2` | R | THz | Reserved channel 2 linewidth field |
 
 ## Protocol summary
 

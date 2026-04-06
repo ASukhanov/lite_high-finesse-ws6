@@ -1,12 +1,9 @@
 """liteServer for Wavelength Meter WS6-200, served by Windows app.
-Support several instruments by providing a comma-separated list of wlmData.dll 
-files for each instrument, and the channel number (1 to 8) for WLM 
-with multi-channel switch or double pulse option.
 Requires wlmData.dll from the WLM software, which is a 32-bit DLL and thus 
 requires a 32-bit Python installation.
 """
 # pylint: disable=invalid-name
-__version__ = 'v0.3.0 2026-04-06'# pargs.dll is now an argument, linewidth is now in THz
+__version__ = 'v0.4.0 2026-04-06'# Released.
 
 import sys
 import time#, os, threading
@@ -19,7 +16,6 @@ print(f'liteWLM {__version__}, liteserver {liteserver.__version__}')
 
 LDO = liteserver.LDO
 Device = liteserver.Device
-NumberOfInstruments = 2
 printv = liteserver.printv
 ChannelNumber = 1 # Indicates the signal number (1 to 8) in case of a WLM with
 # multi channel switch or with double pulse option (MLC). For WLM's without
@@ -91,7 +87,7 @@ class WLM(Device):
         self.linewidth_get()
         for pname in ('frequency', 'linewidth','cycle'):
             par = self.PV[pname]
-            printv(f'{pname}: {par.value} at {par.timestamp}')
+            #printv(f'{pname}: {par.value} at {par.timestamp}')
             par.timestamp = ts
         self.publish()
 
@@ -100,8 +96,8 @@ parser = argparse.ArgumentParser(description=__doc__
 ,formatter_class=argparse.ArgumentDefaultsHelpFormatter
 ,epilog=f'liteWLM: {__version__}')
 parser.add_argument('-d','--dbg', action='store_true', help='debugging')
-parser.add_argument('-D','--dlls', default = 'C:/Windows/System32/wlmData.dll', help=
-    'Comma-separated list of wlmData.dll files for each instrument, default is for first instrument')
+parser.add_argument('-D','--dll', default = r'C:\Windows\System32\wlmData.dll', help=
+    'Path to wlmData.dll file, default is for first instrument')
 parser.add_argument('-c','--channel', type=int, default=1, help=
     'Channel number (1 to 8) for WLM with multi-channel switch or double pulse option')
 parser.add_argument('-p','--port', type=int, default=9700,
@@ -111,14 +107,10 @@ parser.add_argument('-s','--simulate', action='store_true', help='Simulate data'
 pargs = parser.parse_args()
 WLM.pargs = pargs
 
-supportedDevices = []
-for i,dllFile in enumerate(pargs.dlls.split(',')):
-    try:
-        supportedDevices.append(WLM(f'dev{i+1}', dllFile))
-    except AttributeError:
-        print(f'ERROR: No WinDLL for WLM {i+1}, try run with --simulate')
-
-if len(supportedDevices) == 0:
+try:
+    supportedDevices = (WLM(f'dev1', pargs.dll),)
+except AttributeError:
+    print(f'ERROR: No WinDLL for WLM {i+1}, try run with --simulate')
     sys.exit(1)
 
 liteserver.Server.Dbg = pargs.dbg
