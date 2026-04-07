@@ -3,7 +3,7 @@ Requires wlmData.dll from the WLM software, which is a 32-bit DLL and thus
 requires a 32-bit Python installation.
 """
 # pylint: disable=invalid-name
-__version__ = 'v0.4.0 2026-04-06'# Released.
+__version__ = 'v0.4.1 2026-04-07'# Added pressure and temperature readings.
 
 import sys
 import time#, os, threading
@@ -32,15 +32,19 @@ class WLM(Device):
             self.dll = ctypes.WinDLL(dll)
             #self.dll.GetWavelengthNum.restype = ctypes.c_double
             self.dll.GetFrequencyNum.restype = ctypes.c_double
-            self.dll.GetLinewidthNum.restype = ctypes.c_double
+            self.dll.GetLinewidth.restype = ctypes.c_double
+            self.dll.GetTemperature.restype = ctypes.c_double
+            self.dll.GetPressure.restype = ctypes.c_double
             printv('<set_dll:')
 
         self.pars = {
           #'wavelength': LDO_WLM('R','Wavelength [nM]',[0.]),
           'cycle':     LDO('RI','cycle', 0),
           'frequency': LDO('R','Frequency',0., getter=self.frequency_get, units='THz'),
-          'linewidth': LDO('R','Linewidth',0., getter=self.linewidth_get, units='THz'),
-          'dll':       LDO('R','Path to wlmData.dll',dll),
+          'linewidth': LDO('R','Linewidth',0., units='nm'),
+          'temperature': LDO('R','Temperature',0., units='°C'),
+          'pressure': LDO('R','Pressure',0., units='mbar'),
+          #'dll':       LDO('R','Path to wlmData.dll',dll),
           #'sleep':     LDO('W','Sleep time between readings [s]',[1]),
         }
         super().__init__(name, pars=self.pars)
@@ -52,19 +56,15 @@ class WLM(Device):
             par.value = modf(liteserver.time.time())[0]
         else:
             par.value = self.dll.GetFrequencyNum(\
-                ctypes.c_long(ChannelNumber), ctypes.c_double(0))#
+                ctypes.c_long(ChannelNumber), ctypes.c_double(0.))#
+            # read others to update the values in the WLM software, otherwise they are not updated
+            self.PV['linewidth'].value = self.dll.GetLinewidth(
+                #ISSUE: the linewidth is always returned in nm
+                ctypes.c_long(ChannelNumber), ctypes.c_double(2.))#cReturnWavelengthAir=1, cReturnWavelengthVacuum=0, cReturnFrequency=2, cReturnEnergy=3
+            self.PV['temperature'].value = self.dll.GetTemperature(ctypes.c_double(0))
+            self.PV['pressure'].value = self.dll.GetPressure(ctypes.c_double(0))
         par.timestamp = liteserver.time.time()
         printv(f'<get f: {par.value}')
-
-    def linewidth_get(self):
-        """Get linewidth from WLM, in THz"""
-        par = self.PV['linewidth']
-        if WLM.pargs.simulate:
-            par.value = modf(liteserver.time.time())[0]
-        else:
-            par.value = self.dll.GetLinewidthNum(
-          #ctypes.c_long(2), ctypes.c_double(0))# see wlmConst.py for cReturnFrequency=2
-          ctypes.c_long(1), ctypes.c_double(0))# cReturnWavelengthAir=1, cReturnWavelengthVacuum=0, cReturnFrequency=2, cReturnEnergy=3
 
         par.timestamp = liteserver.time.time()
         printv(f'<get l: {par.value}')
@@ -84,8 +84,7 @@ class WLM(Device):
         printv(f"cycle: {self.PV['cycle'].value}")
         ts = time.time()
         self.frequency_get()
-        self.linewidth_get()
-        for pname in ('frequency', 'linewidth','cycle'):
+        for pname in ('frequency','linewidth','temperature','pressure','cycle'):
             par = self.PV[pname]
             #printv(f'{pname}: {par.value} at {par.timestamp}')
             par.timestamp = ts
