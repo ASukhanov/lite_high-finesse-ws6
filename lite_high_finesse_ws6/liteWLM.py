@@ -107,9 +107,9 @@ pargs = parser.parse_args()
 WLM.pargs = pargs
 
 try:
-    supportedDevices = (WLM(f'dev1', pargs.dll),)
+    supportedDevices = (WLM('dev1', pargs.dll),)
 except AttributeError:
-    print(f'ERROR: No WinDLL for WLM {i+1}, try run with --simulate')
+    print('ERROR: No WinDLL on this system, try run with --simulate')
     sys.exit(1)
 
 liteserver.Server.Dbg = pargs.dbg
@@ -117,4 +117,3 @@ liteserver.ServerDev.PollingInterval = pargs.pollingPeriod
 server = liteserver.Server(supportedDevices, port=pargs.port)
 
 server.loop()
-
